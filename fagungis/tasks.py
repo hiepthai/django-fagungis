@@ -45,14 +45,14 @@ def setup():
         _hg_clone()
     else:
         _git_clone()
-    _install_virtualenv()
+    #_install_virtualenv()
     _create_virtualenv()
     _install_gunicorn()
     _install_requirements()
     _upload_rungunicorn_script()
     _upload_supervisord_conf()
     _upload_nginx_conf()
-
+    _setup_django_project()
     end_time = datetime.now()
     finish_message = '[%s] Correctly finished in %i seconds' % \
     (green_bg(end_time.strftime('%H:%M:%S')), (end_time - start_time).seconds)
@@ -125,6 +125,7 @@ def git_pull():
 
 @task
 def test_configuration(verbose=True):
+
     errors = []
     parameters_info = []
     if 'project' not in env or not env.project:
@@ -273,6 +274,10 @@ def test_configuration(verbose=True):
         errors.append('"supervisord_conf_file" configuration missing')
     elif verbose:
         parameters_info.append(('supervisord_conf_file', env.supervisord_conf_file))
+    if 'python_interpreter' not in env:
+        env['python_interpreter'] = 'python'
+
+
 
     if errors:
         if len(errors) == 29:
@@ -315,27 +320,27 @@ def _verify_sudo():
 
 def _install_nginx():
     # add nginx stable ppa
-    sudo("add-apt-repository -y ppa:nginx/stable")
-    sudo("apt-get update")
-    sudo("apt-get -y install nginx")
-    sudo("/etc/init.d/nginx start")
+    # sudo("add-apt-repository -y ppa:nginx/stable")
+    # sudo("apt-get update")
+    sudo("yum install nginx")
+    # sudo("/etc/init.d/nginx start")
 
 
 def _install_dependencies():
     ''' Ensure those Debian/Ubuntu packages are installed '''
     packages = [
-        "python-software-properties",
-        "python-dev",
-        "build-essential",
-        "python-pip",
-        "supervisor",
+#        "python-software-properties",
+#        "python-dev",
+#        "build-essential",
+#        "python-pip",
+#        "supervisor",
     ]
-    sudo("apt-get update")
-    sudo("apt-get -y install %s" % " ".join(packages))
+#    sudo("apt-get update")
+#    sudo("apt-get -y install %s" % " ".join(packages))
     if "additional_packages" in env and env.additional_packages:
-        sudo("apt-get -y install %s" % " ".join(env.additional_packages))
+        sudo("yum install %s" % " ".join(env.additional_packages))
     _install_nginx()
-    sudo("pip install --upgrade pip")
+    #sudo("pip install --upgrade pip")
 
 
 def _install_requirements():
@@ -398,7 +403,7 @@ def _remove_project_files():
     sudo('rm -rf %s' % env.supervisor_stdout_logfile)
     # remove nginx conf
     sudo('rm -rf %s' % env.nginx_conf_file)
-    sudo('rm -rf /etc/nginx/sites-enabled/%s' % basename(env.nginx_conf_file))
+    sudo('rm -rf /etc/nginx/conf.d/%s' % basename(env.nginx_conf_file))
     # remove supervisord conf
     sudo('rm -rf %s' % env.supervisord_conf_file)
     sudo('rm -rf /etc/supervisor/conf.d/%s' % basename(env.supervisord_conf_file))
@@ -448,7 +453,8 @@ def _upload_nginx_conf():
     upload_template(template, env.nginx_conf_file,
                     context=context, backup=False, use_sudo=True)
 
-    sudo('ln -sf %s /etc/nginx/sites-enabled/%s' % (env.nginx_conf_file, basename(env.nginx_conf_file)))
+    sudo('ln -sf %s /etc/nginx/conf.d/%s' % (env.nginx_conf_file,
+                                        basename(env.nginx_conf_file)))
     _test_nginx_conf()
     _reload_nginx()
 
@@ -473,10 +479,16 @@ def _upload_supervisord_conf():
 
 def _prepare_django_project():
     with cd(env.django_project_root):
-        virtenvrun('python manage.py syncdb --noinput --verbosity=1')
+        virtenvrun('%s manage.py syncdb --noinput --verbosity=1 --settings=%s' % (env.python_interpreter, env.django_project_settings))
         if env.south_used:
-            virtenvrun('python manage.py migrate --noinput --verbosity=1')
-        virtenvsudo('python manage.py collectstatic --noinput')
+            virtenvrun('%s manage.py migrate --noinput --verbosity=1 --settings=%s' % (env.python_interpreter, env.django_project_settings))
+        virtenvsudo('%s manage.py collectstatic --noinput --settings=%s' % (env.python_interpreter, env.django_project_settings))
+
+def _setup_django_project():
+    with cd(env.django_project_root):
+        virtenvrun('%s manage.py syncdb --all --noinput --verbosity=1 --settings=%s' % (env.python_interpreter, env.django_project_settings))
+        if env.south_used:
+            virtenvrun('%s manage.py migrate --fake --noinput --verbosity=1 --settings=%s' % (env.python_interpreter, env.django_project_settings))
 
 
 def _prepare_media_path():

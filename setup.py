@@ -15,6 +15,7 @@ CLASSIFIERS = [
     'Programming Language :: Python',
     'Programming Language :: Python :: 2.5',
     'Programming Language :: Python :: 2.6',
+    'Programming Language :: Python :: 2.7',
     'Topic :: Software Development',
     'Topic :: Software Development :: Build Tools',
     'Topic :: Software Development :: Libraries',
@@ -25,12 +26,12 @@ CLASSIFIERS = [
 ]
 
 setup(
-    name="django-fagungis",
+    name="dreipol-django-fagungis",
     version=__import__('fagungis').get_version(),
-    url='https://bitbucket.org/DNX/django-fagungis/wiki/Home',
-    download_url='http://bitbucket.org/DNX/django-fagungis/downloads',
+    url='https://github.com/dreipol/django-fagungis',
+    download_url='https://github.com/dreipol/django-fagungis',
     license='BSD License',
-    description="DJANGO + FAbric + GUnicorn + NGInx + Supervisor deployment",
+    description="DJANGO + FAbric + GUnicorn + NGInx + Supervisor deployment for dreipol",
     long_description=open(os.path.join(os.path.dirname(__file__), 'README.rst')).read(),
     author='Denis Darii',
     author_email='denis.darii@gmail.com',
