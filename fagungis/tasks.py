@@ -461,7 +461,7 @@ def _upload_nginx_conf():
 
 def _reload_supervisorctl():
     sudo('%(supervisorctl)s reread' % env)
-    sudo('%(supervisorctl)s reload' % env)
+    # sudo('%(supervisorctl)s reload' % env)
 
 
 def _upload_supervisord_conf():
