@@ -15,7 +15,7 @@ red_bg = _wrap_with('41')
 fagungis_path = dirname(abspath(__file__))
 
 
-##########################
+# #########################
 ## START Fagungis tasks ##
 ##########################
 
@@ -55,7 +55,7 @@ def setup():
     _setup_django_project()
     end_time = datetime.now()
     finish_message = '[%s] Correctly finished in %i seconds' % \
-    (green_bg(end_time.strftime('%H:%M:%S')), (end_time - start_time).seconds)
+                     (green_bg(end_time.strftime('%H:%M:%S')), (end_time - start_time).seconds)
     puts(finish_message)
 
 
@@ -87,8 +87,9 @@ def deploy():
 
     end_time = datetime.now()
     finish_message = '[%s] Correctly deployed in %i seconds' % \
-    (green_bg(end_time.strftime('%H:%M:%S')), (end_time - start_time).seconds)
+                     (green_bg(end_time.strftime('%H:%M:%S')), (end_time - start_time).seconds)
     puts(finish_message)
+
 
 @task
 def remove():
@@ -109,7 +110,7 @@ def remove():
 
     end_time = datetime.now()
     finish_message = '[%s] Correctly finished in %i seconds' % \
-    (green_bg(end_time.strftime('%H:%M:%S')), (end_time - start_time).seconds)
+                     (green_bg(end_time.strftime('%H:%M:%S')), (end_time - start_time).seconds)
     puts(finish_message)
 
 
@@ -118,14 +119,15 @@ def hg_pull():
     with cd(env.code_root):
         sudo('hg pull -u')
 
+
 @task
 def git_pull():
     with cd(env.code_root):
         sudo('git pull -u')
 
+
 @task
 def test_configuration(verbose=True):
-
     errors = []
     parameters_info = []
     if 'project' not in env or not env.project:
@@ -277,8 +279,6 @@ def test_configuration(verbose=True):
     if 'python_interpreter' not in env:
         env['python_interpreter'] = 'python'
 
-
-
     if errors:
         if len(errors) == 29:
             ''' all configuration missing '''
@@ -329,14 +329,14 @@ def _install_nginx():
 def _install_dependencies():
     ''' Ensure those Debian/Ubuntu packages are installed '''
     packages = [
-#        "python-software-properties",
-#        "python-dev",
-#        "build-essential",
-#        "python-pip",
-#        "supervisor",
+        #        "python-software-properties",
+        #        "python-dev",
+        #        "build-essential",
+        #        "python-pip",
+        #        "supervisor",
     ]
-#    sudo("apt-get update")
-#    sudo("apt-get -y install %s" % " ".join(packages))
+    #    sudo("apt-get update")
+    #    sudo("apt-get -y install %s" % " ".join(packages))
     if "additional_packages" in env and env.additional_packages:
         sudo("yum install %s" % " ".join(env.additional_packages))
     _install_nginx()
@@ -424,8 +424,10 @@ def virtenvsudo(command):
 def _hg_clone():
     sudo('hg clone %s %s' % (env.repository, env.code_root))
 
+
 def _git_clone():
     sudo('git clone %s %s' % (env.repository, env.code_root))
+
 
 def _test_nginx_conf():
     with settings(hide('running', 'stdout', 'stderr', 'warnings'), warn_only=True):
@@ -441,6 +443,8 @@ def _reload_nginx():
 def _upload_nginx_conf():
     ''' upload nginx conf '''
     local_nginx_conf_file = 'nginx.conf'
+    if env.nginx_local_conf_file:
+        local_nginx_conf_file = env.nginx_local_conf_file
     if env.nginx_https:
         local_nginx_conf_file = 'nginx_https.conf'
     if isfile('conf/%s' % local_nginx_conf_file):
@@ -454,7 +458,7 @@ def _upload_nginx_conf():
                     context=context, backup=False, use_sudo=True)
 
     sudo('ln -sf %s /etc/nginx/conf.d/%s' % (env.nginx_conf_file,
-                                        basename(env.nginx_conf_file)))
+                                             basename(env.nginx_conf_file)))
     _test_nginx_conf()
     _reload_nginx()
 
@@ -479,16 +483,22 @@ def _upload_supervisord_conf():
 
 def _prepare_django_project():
     with cd(env.django_project_root):
-        virtenvrun('%s manage.py syncdb --noinput --verbosity=1 --settings=%s' % (env.python_interpreter, env.django_project_settings))
+        virtenvrun('%s manage.py syncdb --noinput --verbosity=1 --settings=%s' % (
+        env.python_interpreter, env.django_project_settings))
         if env.south_used:
-            virtenvrun('%s manage.py migrate --noinput --verbosity=1 --settings=%s' % (env.python_interpreter, env.django_project_settings))
-        virtenvsudo('%s manage.py collectstatic --noinput --settings=%s' % (env.python_interpreter, env.django_project_settings))
+            virtenvrun('%s manage.py migrate --noinput --verbosity=1 --settings=%s' % (
+            env.python_interpreter, env.django_project_settings))
+        virtenvsudo('%s manage.py collectstatic --noinput --settings=%s' % (
+        env.python_interpreter, env.django_project_settings))
+
 
 def _setup_django_project():
     with cd(env.django_project_root):
-        virtenvrun('%s manage.py syncdb --all --noinput --verbosity=1 --settings=%s' % (env.python_interpreter, env.django_project_settings))
+        virtenvrun('%s manage.py syncdb --all --noinput --verbosity=1 --settings=%s' % (
+        env.python_interpreter, env.django_project_settings))
         if env.south_used:
-            virtenvrun('%s manage.py migrate --fake --noinput --verbosity=1 --settings=%s' % (env.python_interpreter, env.django_project_settings))
+            virtenvrun('%s manage.py migrate --fake --noinput --verbosity=1 --settings=%s' % (
+            env.python_interpreter, env.django_project_settings))
 
 
 def _prepare_media_path():
