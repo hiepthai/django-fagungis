@@ -443,7 +443,8 @@ def _reload_nginx():
 def _upload_nginx_conf():
     ''' upload nginx conf '''
     local_nginx_conf_file = 'nginx.conf'
-    if env.nginx_local_conf_file:
+    if 'nginx_local_conf_file' in env:
+        print green_bg("Using local nginx file")
         local_nginx_conf_file = env.nginx_local_conf_file
     if env.nginx_https:
         local_nginx_conf_file = 'nginx_https.conf'
