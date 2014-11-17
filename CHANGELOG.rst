@@ -6,7 +6,6 @@ Version 0.0.20
 
 * fixing a crash when local nginx conf file not set
 
-
 Version 0.0.19
 -------------------------------------------------------------
 
