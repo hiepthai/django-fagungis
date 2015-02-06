@@ -1,6 +1,14 @@
 Changelog
 =============================================================
 
+Version 0.0.21
+-------------------------------------------------------------
+
+* added support for django 1.7 with the env property env.django_version
+* updated support for gunicorn
+* improved directory permissions
+
+
 Version 0.0.20
 -------------------------------------------------------------
 
