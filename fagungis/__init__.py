@@ -1,5 +1,5 @@
 __import__("pkg_resources").declare_namespace(__name__)
-VERSION = (0, 0, 20, 'alpha', 1)
+VERSION = (0, 0, 21, 'alpha', 1)
 
 
 def get_version(version=None):
