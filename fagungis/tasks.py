@@ -7,7 +7,7 @@ from fabric.api import env, puts, abort, cd, hide, task
 from fabric.operations import sudo, settings, run
 from fabric.contrib import console
 from fabric.contrib.files import upload_template, append, exists
-
+from distutils.version import StrictVersion
 from fabric.colors import _wrap_with, green
 
 green_bg = _wrap_with('42')
@@ -53,6 +53,7 @@ def setup():
     _upload_supervisord_conf()
     _upload_nginx_conf()
     _setup_django_project()
+    _setup_permissions()
     end_time = datetime.now()
     finish_message = '[%s] Correctly finished in %i seconds' % \
                      (green_bg(end_time.strftime('%H:%M:%S')), (end_time - start_time).seconds)
@@ -238,6 +239,8 @@ def test_configuration(verbose=True):
         parameters_info.append(('nginx_client_max_body_size', env.nginx_client_max_body_size))
     if 'nginx_htdocs' not in env or not env.nginx_htdocs:
         errors.append('"nginx_htdocs" configuration missing')
+    if 'gunicorn_wsgi_module' not in env or not env.gunicorn_wsgi_module:
+        errors.append('"gunicorn_wsgi_module" configuration missing, should be something like PROJECT.wsgi:application')
     elif verbose:
         parameters_info.append(('nginx_htdocs', env.nginx_htdocs))
 
@@ -466,6 +469,7 @@ def _upload_nginx_conf():
 
 def _reload_supervisorctl():
     sudo('%(supervisorctl)s reread' % env)
+    sudo('%(supervisorctl)s update' % env)
     # sudo('%(supervisorctl)s reload' % env)
 
 
@@ -484,28 +488,41 @@ def _upload_supervisord_conf():
 
 def _prepare_django_project():
     with cd(env.django_project_root):
-        virtenvrun('%s manage.py syncdb --noinput --verbosity=1 --settings=%s' % (
-        env.python_interpreter, env.django_project_settings))
-        if env.south_used:
-            virtenvrun('%s manage.py migrate --noinput --verbosity=1 --settings=%s' % (
+        if _has_internal_migration_support():
+            virtenvrun('%s manage.py migrate --noinput --verbosity=1 --settings=%s' % (env.python_interpreter,
+                                                                                       env.django_project_settings))
+        else:
+            virtenvrun('%s manage.py syncdb --noinput --verbosity=1 --settings=%s' % (
             env.python_interpreter, env.django_project_settings))
+            if env.south_used:
+                virtenvrun('%s manage.py migrate --noinput --verbosity=1 --settings=%s' % (
+                env.python_interpreter, env.django_project_settings))
         virtenvsudo('%s manage.py collectstatic --noinput --settings=%s' % (
         env.python_interpreter, env.django_project_settings))
 
 
 def _setup_django_project():
     with cd(env.django_project_root):
-        virtenvrun('%s manage.py syncdb --all --noinput --verbosity=1 --settings=%s' % (
-        env.python_interpreter, env.django_project_settings))
-        if env.south_used:
-            virtenvrun('%s manage.py migrate --fake --noinput --verbosity=1 --settings=%s' % (
+        if _has_internal_migration_support():
+                virtenvrun('%s manage.py migrate --noinput --verbosity=1 --settings=%s' % (
+                env.python_interpreter, env.django_project_settings))
+        else:
+            virtenvrun('%s manage.py syncdb --all --noinput --verbosity=1 --settings=%s' % (
             env.python_interpreter, env.django_project_settings))
+            if env.south_used:
+                virtenvrun('%s manage.py migrate --fake --noinput --verbosity=1 --settings=%s' % (
+                env.python_interpreter, env.django_project_settings))
 
 
 def _prepare_media_path():
     path = env.django_media_path.rstrip('/')
     sudo('mkdir -p %s' % path)
     sudo('chmod -R 775 %s' % path)
+
+def _setup_permissions():
+    sudo('usermod -G nginx %s' % env.django_user)
+    sudo('chown -R %s:nginx /opt/%s' % (env.django_user, env.django_user))
+    sudo('chmod -R g+x /opt/%s' % env.django_user)
 
 
 def _upload_rungunicorn_script():
@@ -540,3 +557,12 @@ def _read_key_file(key_file):
 def _push_key(key_file='~/.ssh/id_rsa.pub'):
     key_text = _read_key_file(key_file)
     append('~/.ssh/authorized_keys', key_text)
+
+def _get_django_version():
+    if 'django_version' in env:
+        return StrictVersion(env.django_version)
+    return StrictVersion('1.6')
+
+def _has_internal_migration_support():
+    return _get_django_version() >= StrictVersion('1.7')
+
