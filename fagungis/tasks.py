@@ -45,7 +45,14 @@ def setup():
         _hg_clone()
     else:
         _git_clone()
-    #_install_virtualenv()
+
+    if env.repository_branch is not None:
+        if env.repository_type == 'hg':
+            hg_checkout(env.repository_branch)
+        else:
+            git_checkout(env.repository_branch)
+
+    _install_virtualenv()
     _create_virtualenv()
     _install_gunicorn()
     _install_requirements()
@@ -166,6 +173,10 @@ def test_configuration(verbose=True):
         errors.append('Django user missing')
     elif verbose:
         parameters_info.append(('Django user', env.django_user))
+    if 'django_version' not in env or not env.django_version:
+        errors.append('Django version missing')
+    elif verbose:
+        parameters_info.append(('Django version', env.django_version))
     if 'django_user_group' not in env or not env.django_user_group:
         errors.append('Django user group missing')
     elif verbose:
@@ -258,8 +269,8 @@ def test_configuration(verbose=True):
         parameters_info.append(('nginx_client_max_body_size', env.nginx_client_max_body_size))
     if 'nginx_htdocs' not in env or not env.nginx_htdocs:
         errors.append('"nginx_htdocs" configuration missing')
-    # if 'gunicorn_wsgi_module' not in env or not env.gunicorn_wsgi_module:
-    #     errors.append('"gunicorn_wsgi_module" configuration missing, should be something like PROJECT.wsgi:application')
+    if 'gunicorn_wsgi_module' not in env or not env.gunicorn_wsgi_module:
+        errors.append('"gunicorn_wsgi_module" configuration missing, should be something like PROJECT.wsgi:application')
     elif verbose:
         parameters_info.append(('nginx_htdocs', env.nginx_htdocs))
 
@@ -400,7 +411,7 @@ def _setup_directories():
     sudo('mkdir -p %s' % dirname(env.nginx_conf_file))
     sudo('mkdir -p %s' % dirname(env.supervisord_conf_file))
     sudo('mkdir -p %s' % dirname(env.rungunicorn_script))
-    sudo('mkdir -p %(django_user_home)s/tmp' % env)
+    sudo('mkdir -p %(django_user_home)s/.tmp' % env)
     sudo('mkdir -p %(nginx_htdocs)s' % env)
     sudo('echo "<html><body>nothing here</body></html> " > %(nginx_htdocs)s/index.html' % env)
 
@@ -531,7 +542,7 @@ def _setup_django_project():
                     env.python_interpreter, env.django_project_settings)
                 )
         else:
-            virtenvrun('%s manage.py syncdb --all --noinput --verbosity=1 --settings=%s' % (
+            virtenvrun('%s manage.py syncdb --noinput --verbosity=1 --settings=%s' % (
                 env.python_interpreter, env.django_project_settings)
             )
             if env.south_used:
