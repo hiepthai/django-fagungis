@@ -74,10 +74,17 @@ def deploy():
     puts(green_bg('Start deploy...'))
     start_time = datetime.now()
 
-    if env.repository_type == 'hg':
-        hg_pull()
+    if env.repository_branch is None:
+        if env.repository_type == 'hg':
+            hg_pull()
+        else:
+            git_pull()
     else:
-        git_pull()
+        if env.repository_type == 'hg':
+            hg_checkout(env.repository_branch)
+        else:
+            git_checkout(env.repository_branch)
+
     _install_requirements()
     _upload_nginx_conf()
     _upload_rungunicorn_script()
@@ -125,6 +132,18 @@ def hg_pull():
 def git_pull():
     with cd(env.code_root):
         sudo('git pull -u')
+
+
+@task
+def hg_checkout(branch):
+    with cd(env.code_root):
+        sudo('hg fetch && hg checkout %s') % branch
+
+
+@task
+def git_checkout(branch):
+    with cd(env.code_root):
+        sudo('git fetch && git checkout %s') % branch
 
 
 @task
@@ -323,27 +342,27 @@ def _verify_sudo():
 
 def _install_nginx():
     # add nginx stable ppa
-    # sudo("add-apt-repository -y ppa:nginx/stable")
-    # sudo("apt-get update")
-    sudo("yum install nginx")
-    # sudo("/etc/init.d/nginx start")
+    sudo("add-apt-repository -y ppa:nginx/stable")
+    sudo("apt-get update")
+    sudo("apt-get -y install nginx")
+    sudo("/etc/init.d/nginx start")
 
 
 def _install_dependencies():
     ''' Ensure those Debian/Ubuntu packages are installed '''
     packages = [
-        #        "python-software-properties",
-        #        "python-dev",
-        #        "build-essential",
-        #        "python-pip",
-        #        "supervisor",
+        "python-software-properties",
+        "python-dev",
+        "build-essential",
+        "python-pip",
+        "supervisor",
     ]
-    #    sudo("apt-get update")
-    #    sudo("apt-get -y install %s" % " ".join(packages))
+    sudo("apt-get update")
+    sudo("apt-get -y install %s" % " ".join(packages))
     if "additional_packages" in env and env.additional_packages:
-        sudo("yum install %s" % " ".join(env.additional_packages))
+        sudo("apt-get -y install %s" % " ".join(env.additional_packages))
     _install_nginx()
-    #sudo("pip install --upgrade pip")
+    sudo("pip install --upgrade pip")
 
 
 def _install_requirements():
@@ -493,31 +512,38 @@ def _prepare_django_project():
                                                                                        env.django_project_settings))
         else:
             virtenvrun('%s manage.py syncdb --noinput --verbosity=1 --settings=%s' % (
-            env.python_interpreter, env.django_project_settings))
+                env.python_interpreter, env.django_project_settings)
+            )
             if env.south_used:
                 virtenvrun('%s manage.py migrate --noinput --verbosity=1 --settings=%s' % (
-                env.python_interpreter, env.django_project_settings))
+                    env.python_interpreter, env.django_project_settings)
+                )
         virtenvsudo('%s manage.py collectstatic --noinput --settings=%s' % (
-        env.python_interpreter, env.django_project_settings))
+            env.python_interpreter, env.django_project_settings)
+        )
 
 
 def _setup_django_project():
     with cd(env.django_project_root):
         if _has_internal_migration_support():
                 virtenvrun('%s manage.py migrate --noinput --verbosity=1 --settings=%s' % (
-                env.python_interpreter, env.django_project_settings))
+                    env.python_interpreter, env.django_project_settings)
+                )
         else:
             virtenvrun('%s manage.py syncdb --all --noinput --verbosity=1 --settings=%s' % (
-            env.python_interpreter, env.django_project_settings))
+                env.python_interpreter, env.django_project_settings)
+            )
             if env.south_used:
                 virtenvrun('%s manage.py migrate --fake --noinput --verbosity=1 --settings=%s' % (
-                env.python_interpreter, env.django_project_settings))
+                    env.python_interpreter, env.django_project_settings)
+                )
 
 
 def _prepare_media_path():
     path = env.django_media_path.rstrip('/')
     sudo('mkdir -p %s' % path)
     sudo('chmod -R 775 %s' % path)
+
 
 def _setup_permissions():
     sudo('usermod -G nginx %s' % env.django_user)
@@ -558,11 +584,12 @@ def _push_key(key_file='~/.ssh/id_rsa.pub'):
     key_text = _read_key_file(key_file)
     append('~/.ssh/authorized_keys', key_text)
 
+
 def _get_django_version():
     if 'django_version' in env:
         return StrictVersion(env.django_version)
     return StrictVersion('1.6')
 
+
 def _has_internal_migration_support():
     return _get_django_version() >= StrictVersion('1.7')
-

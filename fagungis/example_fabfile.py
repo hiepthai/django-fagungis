@@ -10,7 +10,9 @@ def example():
     #  name of your project - no spaces, no special chars
     env.project = 'example_production'
     #  hg repository of your project
-    env.repository = 'https://bitbucket.org/DNX/example'
+    env.repository = 'https://bitbucket.org/DNX/example.git'
+    #  branch of repository (default = None)
+    env.repository_branch = None
     #  type of repository (git or hg)
     env.repository_type = 'hg'
     #  hosts to deploy your project, users must be sudoers
