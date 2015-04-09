@@ -258,8 +258,8 @@ def test_configuration(verbose=True):
         parameters_info.append(('nginx_client_max_body_size', env.nginx_client_max_body_size))
     if 'nginx_htdocs' not in env or not env.nginx_htdocs:
         errors.append('"nginx_htdocs" configuration missing')
-    if 'gunicorn_wsgi_module' not in env or not env.gunicorn_wsgi_module:
-        errors.append('"gunicorn_wsgi_module" configuration missing, should be something like PROJECT.wsgi:application')
+    # if 'gunicorn_wsgi_module' not in env or not env.gunicorn_wsgi_module:
+    #     errors.append('"gunicorn_wsgi_module" configuration missing, should be something like PROJECT.wsgi:application')
     elif verbose:
         parameters_info.append(('nginx_htdocs', env.nginx_htdocs))
 
@@ -356,6 +356,7 @@ def _install_dependencies():
         "build-essential",
         "python-pip",
         "supervisor",
+        "software-properties-common"
     ]
     sudo("apt-get update")
     sudo("apt-get -y install %s" % " ".join(packages))
