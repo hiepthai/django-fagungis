@@ -81,16 +81,10 @@ def deploy():
     puts(green_bg('Start deploy...'))
     start_time = datetime.now()
 
-    if env.repository_branch is None:
-        if env.repository_type == 'hg':
-            hg_pull()
-        else:
-            git_pull()
+    if env.repository_type == 'hg':
+        hg_pull()
     else:
-        if env.repository_type == 'hg':
-            hg_checkout(env.repository_branch)
-        else:
-            git_checkout(env.repository_branch)
+        git_pull()
 
     _install_requirements()
     _upload_nginx_conf()
@@ -533,8 +527,10 @@ def _setup_django_project():
 def _prepare_django_project():
     with cd(env.django_project_root):
         _setup_django_project()
-        virtenvsudo('%(python_interpreter)s manage.py collectstatic --noinput \
+        virtenvsudo('%(python_interpreter)s manage.py collectstatic -l -i less -i *.less -i admin --noinput \
             --settings=%(django_project_settings)s' % env)
+
+        sudo('chown -R %(django_user)s %(django_static_path)s' % env)
 
 
 def _prepare_media_path():
