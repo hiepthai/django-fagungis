@@ -551,7 +551,8 @@ def _setup_permissions():
         sudo('chown -R %(django_user)s:www-data %(django_user_home)s' % env)
     else:
         sudo('chown -R %(django_user)s:nginx %(django_user_home)s' % env)
-    sudo('chmod -R g+x /opt/%s' % env.django_user)
+
+    sudo('chmod -R g+x %(django_user_home)s' % env)
 
 
 def _upload_rungunicorn_script():
