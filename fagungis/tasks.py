@@ -517,38 +517,24 @@ def _upload_supervisord_conf():
     _reload_supervisorctl()
 
 
-def _prepare_django_project():
-    with cd(env.django_project_root):
-        if _has_internal_migration_support():
-            virtenvrun('%s manage.py migrate --noinput --verbosity=1 --settings=%s' % (env.python_interpreter,
-                                                                                       env.django_project_settings))
-        else:
-            virtenvrun('%s manage.py syncdb --noinput --verbosity=1 --settings=%s' % (
-                env.python_interpreter, env.django_project_settings)
-            )
-            if env.south_used:
-                virtenvrun('%s manage.py migrate --noinput --verbosity=1 --settings=%s' % (
-                    env.python_interpreter, env.django_project_settings)
-                )
-        virtenvsudo('%s manage.py collectstatic --noinput --settings=%s' % (
-            env.python_interpreter, env.django_project_settings)
-        )
-
-
 def _setup_django_project():
     with cd(env.django_project_root):
         if _has_internal_migration_support():
-                virtenvrun('%s manage.py migrate --noinput --verbosity=1 --settings=%s' % (
-                    env.python_interpreter, env.django_project_settings)
-                )
+            virtenvrun('%(python_interpreter)s manage.py migrate --noinput --verbosity=1 \
+                --settings=%(django_project_settings)s' % env)
         else:
-            virtenvrun('%s manage.py syncdb --noinput --verbosity=1 --settings=%s' % (
-                env.python_interpreter, env.django_project_settings)
-            )
+            virtenvrun('%(python_interpreter)s manage.py syncdb --noinput --verbosity=1 \
+                --settings=%(django_project_settings)s' % env)
             if env.south_used:
-                virtenvrun('%s manage.py migrate --fake --noinput --verbosity=1 --settings=%s' % (
-                    env.python_interpreter, env.django_project_settings)
-                )
+                virtenvrun('%(python_interpreter)s manage.py migrate --fake --noinput --verbosity=1 \
+                    --settings=%(django_project_settings)s' % env)
+
+
+def _prepare_django_project():
+    with cd(env.django_project_root):
+        _setup_django_project()
+        virtenvsudo('%(python_interpreter)s manage.py collectstatic --noinput \
+            --settings=%(django_project_settings)s' % env)
 
 
 def _prepare_media_path():
@@ -562,7 +548,9 @@ def _setup_permissions():
         res = sudo('usermod -G nginx %s' % env.django_user)
     if 'does not exist' in res:
         res = sudo('usermod -G www-data %s' % env.django_user)
-    sudo('chown -R %s:nginx /opt/%s' % (env.django_user, env.django_user))
+        sudo('chown -R %(django_user)s:www-data %(django_user_home)s' % env)
+    else:
+        sudo('chown -R %(django_user)s:nginx %(django_user_home)s' % env)
     sudo('chmod -R g+x /opt/%s' % env.django_user)
 
 
