@@ -144,13 +144,13 @@ def git_pull():
 @task
 def hg_checkout(branch):
     with cd(env.code_root):
-        sudo('hg fetch && hg checkout %s') % branch
+        sudo('hg fetch && hg checkout ' + branch)
 
 
 @task
 def git_checkout(branch):
     with cd(env.code_root):
-        sudo('git fetch && git checkout %s') % branch
+        sudo('git fetch && git checkout ' + branch)
 
 
 @task
@@ -558,7 +558,10 @@ def _prepare_media_path():
 
 
 def _setup_permissions():
-    sudo('usermod -G nginx %s' % env.django_user)
+    with settings(hide('running', 'stdout', 'stderr', 'warnings'), warn_only=True):
+        res = sudo('usermod -G nginx %s' % env.django_user)
+    if 'does not exist' in res:
+        res = sudo('usermod -G www-data %s' % env.django_user)
     sudo('chown -R %s:nginx /opt/%s' % (env.django_user, env.django_user))
     sudo('chmod -R g+x /opt/%s' % env.django_user)
 
